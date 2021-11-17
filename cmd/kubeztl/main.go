@@ -26,6 +26,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/component-base/logs"
 	"k8s.io/kubectl/pkg/cmd"
+	"k8s.io/kubectl/pkg/cmd/plugin"
 
 	"net"
 	"os"
@@ -36,14 +37,14 @@ import (
 
 	"github.com/mgutz/ansi"
 
-	"io/ioutil"
 	"github.com/go-yaml/yaml"
+	"io/ioutil"
 	"math/rand"
 	"time"
 
-
 	"github.com/openziti/sdk-golang/ziti"
 	"github.com/openziti/sdk-golang/ziti/config"
+	"k8s.io/component-base/cli"
 )
 
 
@@ -70,6 +71,7 @@ type MinKubeConfig struct {
 var zFlags = ZitiFlags{}
 
 func main() {
+
 	logrus.SetFormatter(&logrusFormatter{})
 	logrus.SetLevel(logrus.WarnLevel)
 
@@ -81,7 +83,12 @@ func main() {
 
 	// create the cobra command and set ConfigFlags
 	//command := cmd.NewDefaultKubectlCommandWithArgsAndConfigFlags(cmd.NewDefaultPluginHandler(plugin.ValidPluginFilenamePrefixes), os.Args, os.Stdin, os.Stdout, os.Stderr, kubeConfigFlags)
-	command := cmd.NewDefaultKubectlCommand()
+	command := cmd.NewDefaultKubectlCommandWithArgs(cmd.KubectlOptions{
+		PluginHandler: cmd.NewDefaultPluginHandler(plugin.ValidPluginFilenamePrefixes),
+		Arguments:     os.Args,
+		ConfigFlags:   kubeConfigFlags,
+		IOStreams:     genericclioptions.IOStreams{In: os.Stdin, Out: os.Stdout, ErrOut: os.Stderr},
+	})
 
 	//set and parse the ziti flags
 	command = setZitiFlags(command)
@@ -106,9 +113,8 @@ func main() {
 	logs.InitLogs()
 	defer logs.FlushLogs()
 
-	if err := command.Execute(); err != nil {
-		os.Exit(1)
-	}
+	code := cli.Run(command)
+	os.Exit(code)
 }
 
 // function for handling the dialing with ziti
@@ -126,8 +132,7 @@ func dialFunc(ctx context.Context, network, address string) (net.Conn, error) {
 }
 
 func wrapConfigFn(restConfig *rest.Config) *rest.Config {
-
-	restConfig.Dial = nil//dialFunc
+	restConfig.Dial = dialFunc
 	return restConfig
 }
 
