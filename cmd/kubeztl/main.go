@@ -76,17 +76,13 @@ func main() {
 	logrus.SetLevel(logrus.WarnLevel)
 
 	rand.Seed(time.Now().UnixNano())
-	kubeConfigFlags := genericclioptions.NewConfigFlags(true).WithDeprecatedPasswordFlag()
-
-	// set the wrapper function. This allows modification to the reset Config
-	kubeConfigFlags.WrapConfigFn = wrapConfigFn
 
 	// create the cobra command and set ConfigFlags
 	//command := cmd.NewDefaultKubectlCommandWithArgsAndConfigFlags(cmd.NewDefaultPluginHandler(plugin.ValidPluginFilenamePrefixes), os.Args, os.Stdin, os.Stdout, os.Stderr, kubeConfigFlags)
 	command := cmd.NewDefaultKubectlCommandWithArgs(cmd.KubectlOptions{
 		PluginHandler: cmd.NewDefaultPluginHandler(plugin.ValidPluginFilenamePrefixes),
 		Arguments:     os.Args,
-		ConfigFlags:   kubeConfigFlags,
+		ConfigFlags:   genericclioptions.NewConfigFlags(true).WithDeprecatedPasswordFlag().WithWrapConfigFn(wrapConfigFn),
 		IOStreams:     genericclioptions.IOStreams{In: os.Stdin, Out: os.Stdout, ErrOut: os.Stderr},
 	})
 
